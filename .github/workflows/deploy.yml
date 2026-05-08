@@ -36,55 +36,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Prepare SSH
-        env:
-          HOST: ${{ secrets.TEST_HOST }}
-          USER: ${{ secrets.TEST_USER }}
-          SSH_KEY: ${{ secrets.TEST_SSH_KEY }}
+      - name: Build Artifacts
         run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
-          ssh -i ~/.ssh/id_rsa "$USER@$HOST" "mkdir -p /var/www/html"
-          rsync -avz --delete -e "ssh -i ~/.ssh/id_rsa" site/ "$USER@$HOST:/var/www/html/"
+          echo "Build Successful".
 
-  deploy-stag:
-    if: github.event_name == 'push' && github.ref_name == 'release/stag'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Prepare SSH
-        env:
-          HOST: ${{ secrets.STAG_HOST }}
-          USER: ${{ secrets.STAG_USER }}
-          SSH_KEY: ${{ secrets.STAG_SSH_KEY }}
-        run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
-          ssh -i ~/.ssh/id_rsa "$USER@$HOST" "mkdir -p /var/www/html"
-          rsync -avz --delete -e "ssh -i ~/.ssh/id_rsa" site/ "$USER@$HOST:/var/www/html/"
-
-  deploy-prod:
-    if: github.event_name == 'push' && github.ref_name == 'release/prod'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Prepare SSH
-        env:
-          HOST: ${{ secrets.PROD_HOST }}
-          USER: ${{ secrets.PROD_USER }}
-          SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
-        run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
-          ssh -i ~/.ssh/id_rsa "$USER@$HOST" "mkdir -p /var/www/html"
-          rsync -avz --delete -e "ssh -i ~/.ssh/id_rsa" site/ "$USER@$HOST:/var/www/html/"
