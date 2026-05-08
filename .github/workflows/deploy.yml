@@ -4,14 +4,12 @@ on:
   pull_request:
     branches:
       - release/test
-      - release/stagging
-      - release/staging
+      - release/stag
       - release/prod
   push:
     branches:
       - release/test
-      - release/stagging
-      - release/staging
+      - release/stag
       - release/prod
 
 jobs:
@@ -43,12 +41,7 @@ jobs:
               echo "USER=${{ secrets.TEST_USER }}" >> $GITHUB_ENV
               echo "KEY=${{ secrets.TEST_SSH_KEY }}" >> $GITHUB_ENV
               ;;
-            release/stagging)
-              echo "HOST=${{ secrets.STAGING_HOST }}" >> $GITHUB_ENV
-              echo "USER=${{ secrets.STAGING_USER }}" >> $GITHUB_ENV
-              echo "KEY=${{ secrets.STAGING_SSH_KEY }}" >> $GITHUB_ENV
-              ;;
-            release/staging)
+            release/stag)
               echo "HOST=${{ secrets.STAGING_HOST }}" >> $GITHUB_ENV
               echo "USER=${{ secrets.STAGING_USER }}" >> $GITHUB_ENV
               echo "KEY=${{ secrets.STAGING_SSH_KEY }}" >> $GITHUB_ENV
