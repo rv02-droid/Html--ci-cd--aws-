@@ -1,0 +1,77 @@
+name: HTML CI CD
+
+on:
+  pull_request:
+    branches:
+      - release/test
+      - release/stagging
+      - release/staging
+      - release/prod
+  push:
+    branches:
+      - release/test
+      - release/stagging
+      - release/staging
+      - release/prod
+
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate file
+        run: |
+          if [ ! -f site/index.html ]; then
+            echo "site/index.html not found"
+            exit 1
+          fi
+          echo "Validation passed"
+
+  deploy:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select server
+        run: |
+          case "${{ github.ref_name }}" in
+            release/test)
+              echo "HOST=${{ secrets.TEST_HOST }}" >> $GITHUB_ENV
+              echo "USER=${{ secrets.TEST_USER }}" >> $GITHUB_ENV
+              echo "KEY=${{ secrets.TEST_SSH_KEY }}" >> $GITHUB_ENV
+              ;;
+            release/stagging)
+              echo "HOST=${{ secrets.STAGING_HOST }}" >> $GITHUB_ENV
+              echo "USER=${{ secrets.STAGING_USER }}" >> $GITHUB_ENV
+              echo "KEY=${{ secrets.STAGING_SSH_KEY }}" >> $GITHUB_ENV
+              ;;
+            release/staging)
+              echo "HOST=${{ secrets.STAGING_HOST }}" >> $GITHUB_ENV
+              echo "USER=${{ secrets.STAGING_USER }}" >> $GITHUB_ENV
+              echo "KEY=${{ secrets.STAGING_SSH_KEY }}" >> $GITHUB_ENV
+              ;;
+            release/prod)
+              echo "HOST=${{ secrets.PROD_HOST }}" >> $GITHUB_ENV
+              echo "USER=${{ secrets.PROD_USER }}" >> $GITHUB_ENV
+              echo "KEY=${{ secrets.PROD_SSH_KEY }}" >> $GITHUB_ENV
+              ;;
+            *)
+              echo "Unsupported branch"
+              exit 1
+              ;;
+          esac
+
+      - name: Prepare SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "$KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+
+      - name: Deploy site
+        run: |
+          ssh -i ~/.ssh/id_rsa "$USER@$HOST" "mkdir -p /var/www/html"
+          rsync -avz --delete -e "ssh -i ~/.ssh/id_rsa" site/ "$USER@$HOST:/var/www/html/"
