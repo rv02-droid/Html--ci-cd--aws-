@@ -6,6 +6,7 @@ on:
       - release/test
       - release/stag
       - release/prod
+
   push:
     branches:
       - release/test
@@ -17,9 +18,10 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Validate file
+      - name: Check site folder
         run: |
           if [ ! -f site/index.html ]; then
             echo "site/index.html not found"
@@ -27,44 +29,62 @@ jobs:
           fi
           echo "Validation passed"
 
-  deploy:
-    if: github.event_name == 'push'
+  deploy-test:
+    if: github.event_name == 'push' && github.ref_name == 'release/test'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Select server
-        run: |
-          case "${{ github.ref_name }}" in
-            release/test)
-              echo "HOST=${{ secrets.TEST_HOST }}" >> $GITHUB_ENV
-              echo "USER=${{ secrets.TEST_USER }}" >> $GITHUB_ENV
-              echo "KEY=${{ secrets.TEST_SSH_KEY }}" >> $GITHUB_ENV
-              ;;
-            release/stag)
-              echo "HOST=${{ secrets.STAGING_HOST }}" >> $GITHUB_ENV
-              echo "USER=${{ secrets.STAGING_USER }}" >> $GITHUB_ENV
-              echo "KEY=${{ secrets.STAGING_SSH_KEY }}" >> $GITHUB_ENV
-              ;;
-            release/prod)
-              echo "HOST=${{ secrets.PROD_HOST }}" >> $GITHUB_ENV
-              echo "USER=${{ secrets.PROD_USER }}" >> $GITHUB_ENV
-              echo "KEY=${{ secrets.PROD_SSH_KEY }}" >> $GITHUB_ENV
-              ;;
-            *)
-              echo "Unsupported branch"
-              exit 1
-              ;;
-          esac
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Prepare SSH
+        env:
+          HOST: ${{ secrets.TEST_HOST }}
+          USER: ${{ secrets.TEST_USER }}
+          SSH_KEY: ${{ secrets.TEST_SSH_KEY }}
         run: |
           mkdir -p ~/.ssh
-          echo "$KEY" > ~/.ssh/id_rsa
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/id_rsa "$USER@$HOST" "mkdir -p /var/www/html"
+          rsync -avz --delete -e "ssh -i ~/.ssh/id_rsa" site/ "$USER@$HOST:/var/www/html/"
 
-      - name: Deploy site
+  deploy-stag:
+    if: github.event_name == 'push' && github.ref_name == 'release/stag'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          HOST: ${{ secrets.STAG_HOST }}
+          USER: ${{ secrets.STAG_USER }}
+          SSH_KEY: ${{ secrets.STAG_SSH_KEY }}
         run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/id_rsa "$USER@$HOST" "mkdir -p /var/www/html"
+          rsync -avz --delete -e "ssh -i ~/.ssh/id_rsa" site/ "$USER@$HOST:/var/www/html/"
+
+  deploy-prod:
+    if: github.event_name == 'push' && github.ref_name == 'release/prod'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          HOST: ${{ secrets.PROD_HOST }}
+          USER: ${{ secrets.PROD_USER }}
+          SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts
           ssh -i ~/.ssh/id_rsa "$USER@$HOST" "mkdir -p /var/www/html"
           rsync -avz --delete -e "ssh -i ~/.ssh/id_rsa" site/ "$USER@$HOST:/var/www/html/"
