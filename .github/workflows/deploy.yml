@@ -1,0 +1,42 @@
+name: HTML CI CD
+
+on:
+  pull_request:
+    branches:
+      - release/test
+      - release/stag
+      - release/prod
+
+  push:
+    branches:
+      - release/test
+      - release/stag
+      - release/prod
+
+jobs:
+  validate:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check site folder
+        run: |
+          if [ ! -f site/index.html ]; then
+            echo "site/index.html not found"
+            exit 1
+          fi
+          echo "Validation passed"
+
+  deploy-test:
+    if: github.event_name == 'push' && github.ref_name == 'release/test'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build Artifacts
+        run: |
+          echo "Build Successful".
+
